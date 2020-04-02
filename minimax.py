@@ -18,9 +18,15 @@ def static_eval(game: Game) -> int:
     return n_pieces_p[0] - n_pieces_p[1]
 
 
-def minimax(game: Game, depth: int, minimizing: bool):
+def minimax(game, depth, minimizing, alpha=float('-inf'), beta=float('inf')):
     if game.is_over():
-        return (12, None) if game.get_winner() == 1 else (-12, None)
+        winner = game.get_winner()
+        if winner == 1:
+            return (12, None)
+        elif winner == 2:
+            return (-12, None)
+        else:
+            return (0, None)
     if depth == 0:
         return (static_eval(game), None)
     possible_moves = game.get_possible_moves()
@@ -29,15 +35,21 @@ def minimax(game: Game, depth: int, minimizing: bool):
     for move in possible_moves:
         game_copy = deepcopy(game)
         game_copy.move(move)
-        mm_score, _ = minimax(game_copy, depth-1, not minimizing)
+        mm_score, _ = minimax(game_copy, depth-1, not minimizing, alpha, beta)
         if minimizing:
             if score is None or mm_score < score:
                 score = mm_score
                 best_move = move
+                alpha = max(alpha, score)
+                if alpha >= beta:
+                    break
         else:
             if score is None or mm_score > score:
                 score = mm_score
                 best_move = move
+                beta = min(beta, score)
+                if alpha >= beta:
+                    break
     return score, best_move
 
 
@@ -51,16 +63,28 @@ def play_game(i):
             score, move = minimax(game, depth=2, minimizing=False)
             game.move(move)
         else:
-            score, move = minimax(game, depth=2, minimizing=True)
+            # game.move(random.choice(game.get_possible_moves()))
+            score, move = minimax(game, depth=4, minimizing=True)
             game.move(move)
 
-    return 1 if game.get_winner() == 1 else 0
+    winner = game.get_winner()
+    if winner == 1:
+        return 1
+    elif winner == 2:
+        return -1
+    else:
+        return 0
 
 
 n_games = 50
 
 pool = mp.Pool(processes=mp.cpu_count() - 3)
 res = pool.map(play_game, range(n_games))
-mm_wins = sum(res)
+first_wins  = sum(map(lambda x: x == 1, res))
+second_wins = sum(map(lambda x: x == -1, res))
+draws       = sum(map(lambda x: x == 0, res))
 
-print(f"Minimax won {mm_wins}/{n_games} ({mm_wins/n_games*100:.2f}%)")
+
+print(f"First player:  {first_wins:4}/{n_games} ({first_wins/n_games*100:.2f}%)")
+print(f"Second player: {second_wins:4}/{n_games} ({second_wins/n_games*100:.2f}%)")
+print(f"Draws:         {draws:4}/{n_games} ({draws/n_games*100:.2f}%)")
