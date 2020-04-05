@@ -1,6 +1,7 @@
 import random
 import multiprocessing as mp
 from copy import deepcopy
+from tqdm import tqdm
 from checkers.game import Game
 
 
@@ -14,7 +15,6 @@ def static_eval(game: Game) -> int:
     for piece in game.board.pieces:
         if piece.captured is False:
             n_pieces_p[piece.player - 1] += 1
-
     return n_pieces_p[0] - n_pieces_p[1]
 
 
@@ -56,16 +56,16 @@ def minimax(game, depth, minimizing, alpha=float('-inf'), beta=float('inf')):
 def play_game(i):
     game = Game()
 
-    print(f"Game {i}")
+    # print(f"Game {i}")
 
     while not game.is_over():
         if game.whose_turn() == 1:
-            score, move = minimax(game, depth=2, minimizing=False)
+            score, move = minimax(game, depth=4, minimizing=False)
             game.move(move)
         else:
-            # game.move(random.choice(game.get_possible_moves()))
-            score, move = minimax(game, depth=4, minimizing=True)
-            game.move(move)
+            game.move(random.choice(game.get_possible_moves()))
+            # score, move = minimax(game, depth=2, minimizing=True)
+            # game.move(move)
 
     winner = game.get_winner()
     if winner == 1:
@@ -76,14 +76,23 @@ def play_game(i):
         return 0
 
 
-n_games = 50
+n_games = 100
 
+first_wins  = 0
+second_wins = 0
+draws       = 0
 pool = mp.Pool(processes=mp.cpu_count() - 3)
-res = pool.map(play_game, range(n_games))
-first_wins  = sum(map(lambda x: x == 1, res))
-second_wins = sum(map(lambda x: x == -1, res))
-draws       = sum(map(lambda x: x == 0, res))
 
+with mp.Pool(processes=mp.cpu_count() - 3) as pool:
+    with tqdm(total=n_games) as pbar:
+        for _, res in enumerate(pool.imap_unordered(play_game, range(n_games))):
+            if res == 1:
+                first_wins += 1
+            elif res == -1:
+                second_wins += 1
+            else:
+                draws += 1
+            pbar.update()
 
 print(f"First player:  {first_wins:4}/{n_games} ({first_wins/n_games*100:.2f}%)")
 print(f"Second player: {second_wins:4}/{n_games} ({second_wins/n_games*100:.2f}%)")
