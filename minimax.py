@@ -81,7 +81,6 @@ n_games = 100
 first_wins  = 0
 second_wins = 0
 draws       = 0
-pool = mp.Pool(processes=mp.cpu_count() - 3)
 
 with mp.Pool(processes=mp.cpu_count() - 3) as pool:
     with tqdm(total=n_games) as pbar:
